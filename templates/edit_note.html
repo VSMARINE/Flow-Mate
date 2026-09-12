@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}
+Edit Note
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container mt-5 mb-5">
+
+
+    <!-- ==========================
+         PAGE HEADING
+    =========================== -->
+
+    <div class="mb-4">
+
+        <h2 class="mb-1">
+
+            ✏️ Edit Note
+
+        </h2>
+
+        <p class="text-muted mb-0">
+
+            Update your note and manage its reference document.
+
+        </p>
+
+    </div>
+
+
+
+    <!-- ==========================
+         EDIT NOTE CARD
+    =========================== -->
+
+    <div class="card shadow-sm">
+
+        <div class="card-body p-4">
+
+
+            <form
+                action="/update_note/{{ note.id }}"
+                method="POST"
+                enctype="multipart/form-data"
+            >
+
+
+                <!-- ==========================
+                     NOTE TITLE
+                =========================== -->
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+
+                        📝 Note Title
+
+                    </label>
+
+
+                    <input
+                        type="text"
+                        name="title"
+                        class="form-control"
+                        value="{{ note.title }}"
+                        required
+                    >
+
+                </div>
+
+
+
+                <!-- ==========================
+                     NOTE CONTENT
+                =========================== -->
+
+                <div class="mb-4">
+
+                    <label class="form-label">
+
+                        ✏️ Note Content
+
+                    </label>
+
+
+                    <textarea
+                        name="content"
+                        class="form-control"
+                        rows="8"
+                        placeholder="Write your note here..."
+                    >{{ note.content }}</textarea>
+
+                </div>
+
+
+
+                <!-- ==========================
+                     CURRENT DOCUMENT
+                =========================== -->
+
+                {% if note.document_path %}
+
+                <div class="mb-4">
+
+                    <label class="form-label">
+
+                        📄 Current Attached Document
+
+                    </label>
+
+
+                    <div class="border rounded p-3">
+
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+
+                            <!-- FILE INFORMATION -->
+
+                            <div>
+
+                                <div class="fw-bold">
+
+                                    📄 {{ note.document_name }}
+
+                                </div>
+
+
+                                <small class="text-muted">
+
+                                    This document will remain attached
+                                    unless you replace it below.
+
+                                </small>
+
+                            </div>
+
+
+
+                            <!-- DOCUMENT ACTIONS -->
+
+                            <div class="d-flex gap-2">
+
+
+                                <a
+                                    href="/document/{{ note.id }}"
+                                    target="_blank"
+                                    class="btn btn-outline-primary btn-sm"
+                                >
+
+                                    👁 Open
+
+                                </a>
+
+
+                                <a
+                                    href="/download_document/{{ note.id }}"
+                                    class="btn btn-outline-success btn-sm"
+                                >
+
+                                    ⬇ Download
+
+                                </a>
+
+
+                            </div>
+
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {% endif %}
+
+
+
+                <!-- ==========================
+                     REPLACE / ADD DOCUMENT
+                =========================== -->
+
+                <div class="mb-4">
+
+                    {% if note.document_path %}
+
+                    <label class="form-label">
+
+                        🔄 Replace Document
+
+                    </label>
+
+                    {% else %}
+
+                    <label class="form-label">
+
+                        📎 Attach Reference Document
+
+                    </label>
+
+                    {% endif %}
+
+
+                    <input
+                        type="file"
+                        name="document"
+                        class="form-control"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                    >
+
+
+                    <div class="form-text">
+
+                        {% if note.document_path %}
+
+                        Leave this empty if you want to keep the current document.
+
+                        {% else %}
+
+                        Optional: Attach a reference document to this note.
+
+                        {% endif %}
+
+                        <br>
+
+                        Supported files:
+                        PDF, DOC, DOCX, PPT, PPTX and TXT.
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ==========================
+                     BUTTONS
+                =========================== -->
+
+                <div class="d-flex gap-2 flex-wrap">
+
+
+                    <!-- UPDATE -->
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+
+                        💾 Update Note
+
+                    </button>
+
+
+
+                    <!-- CANCEL -->
+
+                    <a
+                        href="/notes"
+                        class="btn btn-secondary"
+                    >
+
+                        ← Cancel
+
+                    </a>
+
+
+                </div>
+
+
+            </form>
+
+
+        </div>
+
+    </div>
+
+
+</div>
+
+{% endblock %}

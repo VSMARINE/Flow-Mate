@@ -1,0 +1,679 @@
+{% extends "base.html" %}
+
+{% block title %}
+Edit Expense
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container mt-5 mb-5">
+
+    <!-- ==========================
+         PAGE HEADER
+    =========================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+
+        <div>
+
+            <h2 class="mb-1">
+                ✏️ Edit Expense
+            </h2>
+
+            <p class="text-muted mb-0">
+                Update the complete information for this expense.
+            </p>
+
+        </div>
+
+
+        <a
+            href="/expenses"
+            class="btn btn-secondary mt-2"
+        >
+
+            ← Back to Expenses
+
+        </a>
+
+    </div>
+
+
+
+    <!-- ==========================
+         EDIT EXPENSE FORM
+    =========================== -->
+
+    <div class="card shadow-sm">
+
+        <div class="card-body p-4">
+
+
+            <form
+                action="/update_expense/{{ expense.id }}"
+                method="POST"
+            >
+
+                <div class="row">
+
+
+                    <!-- ==========================
+                         AMOUNT
+                    =========================== -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+
+                            💰 Amount
+
+                        </label>
+
+                        <input
+                            type="number"
+                            name="amount"
+                            class="form-control"
+                            step="0.01"
+                            min="0.01"
+                            value="{{ expense.amount }}"
+                            required
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         CATEGORY
+                    =========================== -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+
+                            🏷 Category
+
+                        </label>
+
+                        <select
+                            name="category"
+                            class="form-select"
+                            required
+                        >
+
+                            <option
+                                value="Food"
+                                {% if expense.category == "Food" %}selected{% endif %}
+                            >
+                                🍔 Food
+                            </option>
+
+
+                            <option
+                                value="Travel"
+                                {% if expense.category == "Travel" %}selected{% endif %}
+                            >
+                                🚗 Travel
+                            </option>
+
+
+                            <option
+                                value="Education"
+                                {% if expense.category == "Education" %}selected{% endif %}
+                            >
+                                📚 Education
+                            </option>
+
+
+                            <option
+                                value="Shopping"
+                                {% if expense.category == "Shopping" %}selected{% endif %}
+                            >
+                                🛍 Shopping
+                            </option>
+
+
+                            <option
+                                value="Entertainment"
+                                {% if expense.category == "Entertainment" %}selected{% endif %}
+                            >
+                                🎬 Entertainment
+                            </option>
+
+
+                            <option
+                                value="Health"
+                                {% if expense.category == "Health" %}selected{% endif %}
+                            >
+                                🏥 Health
+                            </option>
+
+
+                            <option
+                                value="Other"
+                                {% if expense.category == "Other" %}selected{% endif %}
+                            >
+                                📦 Other
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         EXPENSE DATE
+                    =========================== -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+
+                            📅 Expense Date
+
+                        </label>
+
+                        <input
+                            type="date"
+                            name="expense_date"
+                            class="form-control"
+                            value="{{ expense.expense_date }}"
+                            required
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         DESCRIPTION
+                    =========================== -->
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+
+                            📝 Description
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="description"
+                            class="form-control"
+                            value="{{ expense.description or '' }}"
+                            placeholder="What was this expense for?"
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         PAID TO
+                    =========================== -->
+
+                    <div class="col-md-6 mb-3">
+
+                        <label class="form-label">
+
+                            👤 Paid To / Merchant
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="paid_to"
+                            class="form-control"
+                            value="{{ expense.paid_to or '' }}"
+                            placeholder="Person, shop or company name"
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         PAYMENT METHOD
+                    =========================== -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+
+                            💳 Payment Method
+
+                        </label>
+
+                        <select
+                            name="payment_method"
+                            class="form-select"
+                        >
+
+                            <option value="">
+
+                                Select Method
+
+                            </option>
+
+
+                            <option
+                                value="UPI"
+                                {% if expense.payment_method == "UPI" %}selected{% endif %}
+                            >
+
+                                📱 UPI
+
+                            </option>
+
+
+                            <option
+                                value="Cash"
+                                {% if expense.payment_method == "Cash" %}selected{% endif %}
+                            >
+
+                                💵 Cash
+
+                            </option>
+
+
+                            <option
+                                value="Card"
+                                {% if expense.payment_method == "Card" %}selected{% endif %}
+                            >
+
+                                💳 Card
+
+                            </option>
+
+
+                            <option
+                                value="Bank Transfer"
+                                {% if expense.payment_method == "Bank Transfer" %}selected{% endif %}
+                            >
+
+                                🏦 Bank Transfer
+
+                            </option>
+
+
+                            <option
+                                value="Other"
+                                {% if expense.payment_method == "Other" %}selected{% endif %}
+                            >
+
+                                Other
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         PAYMENT TIME
+                    =========================== -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+
+                            🕒 Payment Time
+
+                        </label>
+
+
+                        <div class="row g-2">
+
+
+                            <!-- HOUR -->
+
+                            <div class="col-4">
+
+                                <select
+                                    id="paymentHour"
+                                    class="form-select"
+                                >
+
+                                    <option value="">
+
+                                        HH
+
+                                    </option>
+
+
+                                    {% for hour in range(1, 13) %}
+
+                                    <option
+                                        value="{{ hour }}"
+                                    >
+
+                                        {{ hour }}
+
+                                    </option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+
+
+                            <!-- MINUTE -->
+
+                            <div class="col-4">
+
+                                <select
+                                    id="paymentMinute"
+                                    class="form-select"
+                                >
+
+                                    <option value="">
+
+                                        MM
+
+                                    </option>
+
+
+                                    {% for minute in range(0, 60) %}
+
+                                    <option
+                                        value="{{ "%02d"|format(minute) }}"
+                                    >
+
+                                        {{ "%02d"|format(minute) }}
+
+                                    </option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+
+
+                            <!-- AM / PM -->
+
+                            <div class="col-4">
+
+                                <select
+                                    id="paymentPeriod"
+                                    class="form-select"
+                                >
+
+                                    <option value="">
+
+                                        AM/PM
+
+                                    </option>
+
+                                    <option value="AM">
+
+                                        AM
+
+                                    </option>
+
+                                    <option value="PM">
+
+                                        PM
+
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                        </div>
+
+
+                        <!-- Actual value sent to Flask -->
+
+                        <input
+                            type="hidden"
+                            name="payment_time"
+                            id="paymentTime"
+                            value="{{ expense.payment_time or '' }}"
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         UPI ID
+                    =========================== -->
+
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+
+                            📱 UPI ID / Payment ID
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="upi_id"
+                            class="form-control"
+                            value="{{ expense.upi_id or '' }}"
+                            placeholder="Optional"
+                        >
+
+                    </div>
+
+
+
+                    <!-- ==========================
+                         PAYMENT LOCATION
+                    =========================== -->
+
+                    <div class="col-12 mb-4">
+
+                        <label class="form-label">
+
+                            📍 Payment Location / Address
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="payment_location"
+                            class="form-control"
+                            value="{{ expense.payment_location or '' }}"
+                            placeholder="Where was this payment made?"
+                        >
+
+                    </div>
+
+
+                </div>
+
+
+
+                <!-- ==========================
+                     BUTTONS
+                =========================== -->
+
+                <div class="d-flex gap-2 flex-wrap">
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-success"
+                    >
+
+                        💾 Update Expense
+
+                    </button>
+
+
+                    <a
+                        href="/view_expense/{{ expense.id }}"
+                        class="btn btn-outline-info"
+                    >
+
+                        👁 View Details
+
+                    </a>
+
+
+                    <a
+                        href="/expenses"
+                        class="btn btn-outline-secondary"
+                    >
+
+                        Cancel
+
+                    </a>
+
+
+                </div>
+
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- ==========================
+     TIME PICKER JAVASCRIPT
+========================== -->
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        const hourSelect =
+            document.getElementById("paymentHour");
+
+        const minuteSelect =
+            document.getElementById("paymentMinute");
+
+        const periodSelect =
+            document.getElementById("paymentPeriod");
+
+        const paymentTime =
+            document.getElementById("paymentTime");
+
+
+        // ==================================
+        // LOAD EXISTING SAVED TIME
+        // Format expected:
+        // 11:30 PM
+        // ==================================
+
+        if (paymentTime.value) {
+
+            const timeParts =
+                paymentTime.value.trim().split(" ");
+
+
+            if (timeParts.length === 2) {
+
+                const clock =
+                    timeParts[0].split(":");
+
+                const period =
+                    timeParts[1];
+
+
+                if (clock.length === 2) {
+
+                    hourSelect.value =
+                        String(parseInt(clock[0]));
+
+                    minuteSelect.value =
+                        clock[1];
+
+                    periodSelect.value =
+                        period;
+
+                }
+
+            }
+
+        }
+
+
+        // ==================================
+        // UPDATE HIDDEN PAYMENT TIME
+        // ==================================
+
+        function updatePaymentTime() {
+
+            const hour =
+                hourSelect.value;
+
+            const minute =
+                minuteSelect.value;
+
+            const period =
+                periodSelect.value;
+
+
+            // If all are empty
+
+            if (!hour && !minute && !period) {
+
+                paymentTime.value = "";
+
+                return;
+
+            }
+
+
+            // Only create a valid time when
+            // all three values are selected
+
+            if (hour && minute && period) {
+
+                paymentTime.value =
+                    hour + ":" +
+                    minute + " " +
+                    period;
+
+            }
+
+        }
+
+
+        // Listen for changes
+
+        hourSelect.addEventListener(
+            "change",
+            updatePaymentTime
+        );
+
+
+        minuteSelect.addEventListener(
+            "change",
+            updatePaymentTime
+        );
+
+
+        periodSelect.addEventListener(
+            "change",
+            updatePaymentTime
+        );
+
+    }
+);
+
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}
+Task Manager
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📋 Task Manager</h2>
+    </div>
+
+    <div class="card shadow p-4 mb-4">
+
+        <form action="/add_task" method="POST">
+
+            <div class="mb-3">
+                <label class="form-label">Task Title</label>
+                <input type="text"
+                       name="title"
+                       class="form-control"
+                       required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description"
+                          class="form-control"
+                          rows="3"></textarea>
+            </div>
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <label class="form-label">
+                        Priority
+                    </label>
+
+                    <select name="priority"
+                            class="form-select">
+
+                        <option value="High">High</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Low">Low</option>
+
+                    </select>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <label class="form-label">
+                        Due Date
+                    </label>
+
+                    <input type="date"
+                           name="due_date"
+                           class="form-control">
+
+                </div>
+
+            </div>
+
+            <button class="btn btn-primary mt-4">
+                ➕ Add Task
+            </button>
+
+        </form>
+
+    </div>
+
+    {% if tasks %}
+
+    <div class="card shadow">
+
+        <div class="card-body">
+
+            <table class="table table-hover align-middle">
+
+                <thead class="table-dark">
+
+                <tr>
+
+                    <th>ID</th>
+                    <th>Task</th>
+                    <th>Description</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th width="170">Actions</th>
+
+                </tr>
+
+                </thead>
+
+                <tbody>
+
+                {% for task in tasks %}
+
+                <tr>
+
+                    <td>{{ task.id }}</td>
+
+                    <td>
+                        <strong>{{ task.title }}</strong>
+                    </td>
+
+                    <td>{{ task.description }}</td>
+
+                    <td>
+
+                        {% if task.priority=="High" %}
+
+                        <span class="badge bg-danger">
+                            High
+                        </span>
+
+                        {% elif task.priority=="Medium" %}
+
+                        <span class="badge bg-warning text-dark">
+                            Medium
+                        </span>
+
+                        {% else %}
+
+                        <span class="badge bg-success">
+                            Low
+                        </span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {{ task.due_date }}
+
+                    </td>
+
+                    <td>
+
+                        {% if task.status=="Completed" %}
+
+                        <span class="badge bg-success">
+                            ✔ Completed
+                        </span>
+
+                        {% else %}
+
+                        <span class="badge bg-secondary">
+                            Pending
+                        </span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        <a href="/edit_task/{{ task.id }}"
+                           class="btn btn-warning btn-sm">
+
+                            Edit
+
+                        </a>
+
+                        <a href="/delete_task/{{ task.id }}"
+                           class="btn btn-danger btn-sm"
+                           onclick="return confirm('Delete this task?')">
+
+                            Delete
+
+                        </a>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    {% else %}
+
+    <div class="alert alert-info">
+
+        No Tasks Added Yet.
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

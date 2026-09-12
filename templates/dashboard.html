@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard
+{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">
+Welcome {{ username }} 👋
+</h2>
+
+<div class="row">
+
+    <div class="col-md-3 mb-4">
+
+        <div class="card shadow-lg p-4 text-center">
+
+            <h1>📋</h1>
+
+            <h4>Task Manager</h4>
+
+            <p>Manage daily tasks</p>
+
+            <a href="/tasks" class="btn btn-primary">
+
+                Open
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3 mb-4">
+
+        <div class="card shadow-lg p-4 text-center">
+
+            <h1>📝</h1>
+
+            <h4>Notes</h4>
+
+            <p>Save study notes</p>
+
+            <a href="/notes" class="btn btn-success">
+
+                Open
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3 mb-4">
+
+        <div class="card shadow-lg p-4 text-center">
+
+            <h1>💰</h1>
+
+            <h4>Expenses</h4>
+
+            <p>Track expenses</p>
+
+            <a href="/expenses" class="btn btn-warning">
+
+                Open
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3 mb-4">
+
+        <div class="card shadow-lg p-4 text-center">
+
+            <h1>🍅</h1>
+
+            <h4>Pomodoro</h4>
+
+            <p>Study Timer</p>
+
+            <a href="/pomodoro" class="btn btn-danger">
+
+                Open
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

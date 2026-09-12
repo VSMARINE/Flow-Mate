@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}
+Expense Details
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container mt-5 mb-5">
+
+
+    <!-- PAGE HEADER -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+
+        <div>
+
+            <h2 class="mb-1">
+                👁 Expense Details
+            </h2>
+
+            <p class="text-muted mb-0">
+                Complete information about this expense.
+            </p>
+
+        </div>
+
+
+        <a
+            href="/expenses"
+            class="btn btn-secondary mt-2"
+        >
+            ← Back to Expenses
+        </a>
+
+    </div>
+
+
+
+    <!-- MAIN EXPENSE CARD -->
+
+    <div class="card shadow-sm mb-4">
+
+
+        <div class="card-body p-4">
+
+
+            <!-- AMOUNT -->
+
+            <div class="text-center mb-4">
+
+                <small class="text-muted">
+                    Total Expense
+                </small>
+
+                <h1 class="text-danger mt-2">
+
+                    ₹ {{ "%.2f"|format(expense.amount) }}
+
+                </h1>
+
+
+                <span class="badge bg-secondary fs-6">
+
+                    {{ expense.category }}
+
+                </span>
+
+            </div>
+
+
+            <hr>
+
+
+            <!-- DETAILS -->
+
+            <div class="row mt-4">
+
+
+                <!-- DESCRIPTION -->
+
+                <div class="col-md-6 mb-4">
+
+                    <h6 class="text-muted">
+                        📝 Description
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {% if expense.description %}
+
+                            {{ expense.description }}
+
+                        {% else %}
+
+                            Not provided
+
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- EXPENSE DATE -->
+
+                <div class="col-md-6 mb-4">
+
+                    <h6 class="text-muted">
+                        📅 Expense Date
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {{ expense.expense_date }}
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- PAID TO -->
+
+                <div class="col-md-6 mb-4">
+
+                    <h6 class="text-muted">
+                        👤 Paid To / Merchant
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {% if expense.paid_to %}
+
+                            {{ expense.paid_to }}
+
+                        {% else %}
+
+                            Not provided
+
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- PAYMENT METHOD -->
+
+                <div class="col-md-6 mb-4">
+
+                    <h6 class="text-muted">
+                        💳 Payment Method
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {% if expense.payment_method %}
+
+                            {{ expense.payment_method }}
+
+                        {% else %}
+
+                            Not provided
+
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- PAYMENT TIME -->
+
+                <div class="col-md-6 mb-4">
+
+                    <h6 class="text-muted">
+                        🕒 Payment Time
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {% if expense.payment_time %}
+
+                            {{ expense.payment_time }}
+
+                        {% else %}
+
+                            Not provided
+
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- UPI ID -->
+
+                <div class="col-md-6 mb-4">
+
+                    <h6 class="text-muted">
+                        📱 UPI ID / Payment ID
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {% if expense.upi_id %}
+
+                            {{ expense.upi_id }}
+
+                        {% else %}
+
+                            Not provided
+
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- LOCATION -->
+
+                <div class="col-12 mb-3">
+
+                    <h6 class="text-muted">
+                        📍 Payment Location / Address
+                    </h6>
+
+                    <p class="mb-0">
+
+                        {% if expense.payment_location %}
+
+                            {{ expense.payment_location }}
+
+                        {% else %}
+
+                            Not provided
+
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ACTION BUTTONS -->
+
+        <div class="card-footer bg-white p-3">
+
+            <div class="d-flex gap-2 flex-wrap">
+
+
+                <a
+                    href="/edit_expense/{{ expense.id }}"
+                    class="btn btn-warning"
+                >
+
+                    ✏️ Edit Expense
+
+                </a>
+
+
+                <a
+                    href="/expenses"
+                    class="btn btn-outline-secondary"
+                >
+
+                    ← Back
+
+                </a>
+
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}
+Pomodoro Timer
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card shadow-lg border-0 pomodoro-main-card">
+
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- Heading -->
+
+                    <div class="text-center">
+
+                        <h1 class="mb-2">
+                            🍅 Pomodoro Timer
+                        </h1>
+
+                        <p class="text-muted mb-4">
+                            Stay Focused. Stay Productive.
+                        </p>
+
+                    </div>
+
+
+                    <!-- Notification -->
+
+                    <div
+                        id="notification"
+                        class="alert alert-success text-center"
+                        style="display:none;">
+                    </div>
+
+
+                    <!-- Mode -->
+
+                    <h3
+                        id="mode"
+                        class="text-center text-success fw-bold mb-4">
+
+                        🍅 Study Session
+
+                    </h3>
+
+
+                    <!-- Circular Timer -->
+
+                    <div class="timer-wrapper">
+
+                        <svg
+                            class="progress-ring"
+                            width="280"
+                            height="280"
+                            viewBox="0 0 280 280">
+
+                            <!-- Background Circle -->
+
+                            <circle
+                                class="progress-ring-bg"
+                                cx="140"
+                                cy="140"
+                                r="120">
+                            </circle>
+
+
+                            <!-- Progress Circle -->
+
+                            <circle
+                                id="progressCircle"
+                                class="progress-ring-circle"
+                                cx="140"
+                                cy="140"
+                                r="120">
+                            </circle>
+
+                        </svg>
+
+
+                        <!-- Timer Text -->
+
+                        <div class="timer-content">
+
+                            <div
+                                id="timer"
+                                class="timer-text">
+
+                                25:00
+
+                            </div>
+
+                            <small id="timerLabel">
+
+                                Focus Time
+
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Buttons -->
+
+                    <div class="text-center mt-4 mb-5">
+
+                        <button
+                            id="startBtn"
+                            class="btn btn-success btn-lg me-2">
+
+                            ▶ Start
+
+                        </button>
+
+                        <button
+                            id="pauseBtn"
+                            class="btn btn-warning btn-lg me-2">
+
+                            ⏸ Pause
+
+                        </button>
+
+                        <button
+                            id="resetBtn"
+                            class="btn btn-danger btn-lg">
+
+                            🔄 Reset
+
+                        </button>
+
+                    </div>
+
+
+                    <!-- Statistics -->
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+
+                            <div class="card border-success h-100">
+
+                                <div class="card-body text-center">
+
+                                    <h5>
+                                        🍅 Study Time
+                                    </h5>
+
+                                    <h2>
+                                        25 Minutes
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <div class="card border-info h-100">
+
+                                <div class="card-body text-center">
+
+                                    <h5>
+                                        ☕ Break Time
+                                    </h5>
+
+                                    <h2>
+                                        5 Minutes
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <div class="card border-primary h-100">
+
+                                <div class="card-body text-center">
+
+                                    <h5>
+                                        ✅ Sessions Completed
+                                    </h5>
+
+                                    <h2 id="sessionCount">
+                                        0
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <div class="card border-warning h-100">
+
+                                <div class="card-body text-center">
+
+                                    <h5>
+                                        ⏱ Focus Time
+                                    </h5>
+
+                                    <h2 id="focusTime">
+                                        0 Min
+                                    </h2>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <hr class="my-4">
+
+
+                   <hr class="my-4">
+
+
+<!-- ==========================
+     RECENT SESSION HISTORY
+========================== -->
+
+<div class="mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h4 class="mb-0">
+            📜 Recent Sessions
+        </h4>
+
+        <span class="text-muted">
+            Last 5 Sessions
+        </span>
+
+    </div>
+
+
+    <!-- Session List -->
+
+    <div id="sessionHistory">
+
+        <div class="text-center text-muted py-3">
+
+            Loading session history...
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<hr class="my-4">
+
+
+<!-- ==========================
+     MOTIVATION
+========================== -->
+
+<div class="text-center">
+
+    <h5 class="mb-3">
+        💡 Daily Motivation
+    </h5>
+
+    <p
+        id="quote"
+        class="fst-italic text-muted">
+
+        "Success is built one focused session at a time."
+
+    </p>
+
+</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script src="{{ url_for('static', filename='js/pomodoro.js') }}"></script>
+
+{% endblock %}s
