@@ -1,104 +1,292 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
 
-<title>{% block title %}Student Productivity Manager{% endblock %}</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>
+        {% block title %}Flow Mate{% endblock %}
+    </title>
 
-<link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
 
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <!-- Flow Mate Favicon -->
+
+    <link rel="icon"
+          type="image/png"
+          href="{{ url_for('static', filename='images/flowmate(icon).png') }}">
+
+
+    <!-- Bootstrap -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+
+    <!-- Main CSS -->
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}">
+
+
+    <!-- Font Awesome -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+
+    <style>
+
+        /* Flow Mate Navbar */
+
+        .flow-base-navbar {
+            background: rgba(255, 255, 255, 0.97);
+            border-bottom: 1px solid #e7edf2;
+            box-shadow: 0 3px 16px rgba(15, 23, 42, 0.06);
+        }
+
+        .flow-base-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            text-decoration: none;
+            color: #172b45 !important;
+        }
+
+        .flow-base-icon {
+            width: 43px;
+            height: 43px;
+
+            object-fit: cover;
+
+            border-radius: 11px;
+
+            box-shadow: 0 3px 10px rgba(31, 126, 196, 0.12);
+        }
+
+        .flow-base-brand-name {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .flow-text {
+            color: #172b45;
+        }
+
+        .mate-text {
+            color: #2dbb78;
+        }
+
+        .flow-base-navbar .nav-link {
+            color: #526173 !important;
+            font-weight: 600;
+
+            padding: 8px 13px !important;
+
+            border-radius: 9px;
+
+            transition: all 0.2s ease;
+        }
+
+        .flow-base-navbar .nav-link:hover {
+            background: #edf9f4;
+            color: #209d64 !important;
+        }
+
+        .flow-base-footer {
+            margin-top: 60px;
+
+            background: #172b45;
+            color: #d7e0e9;
+
+            text-align: center;
+
+            padding: 20px;
+        }
+
+        .flow-base-footer strong {
+            color: #42c98b;
+        }
+
+    </style>
 
 </head>
 
+
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
 
-<div class="container">
+    <!-- =========================
+         NAVBAR
+    ========================== -->
 
-<a class="navbar-brand fw-bold" href="/">
-<i class="fas fa-graduation-cap"></i>
-Student Productivity
-</a>
+    <nav class="navbar navbar-expand-lg flow-base-navbar">
 
-<button
-class="navbar-toggler"
-type="button"
-data-bs-toggle="collapse"
-data-bs-target="#navMenu">
+        <div class="container">
 
-<span class="navbar-toggler-icon"></span>
 
-</button>
+            <a class="navbar-brand flow-base-brand"
+               href="/">
 
-<div class="collapse navbar-collapse" id="navMenu">
+                <img
+                    src="{{ url_for('static', filename='images/flowmate(icon).png') }}"
+                    alt="Flow Mate Logo"
+                    class="flow-base-icon"
+                >
 
-<ul class="navbar-nav ms-auto">
+                <span class="flow-base-brand-name">
+                    <span class="flow-text">Flow</span><span class="mate-text">Mate</span>
+                </span>
 
-<li class="nav-item">
-<a class="nav-link" href="/">Home</a>
-</li>
+            </a>
 
-<li class="nav-item">
-<a class="nav-link" href="/login">Login</a>
-</li>
 
-<li class="nav-item">
-<a class="nav-link" href="/register">Register</a>
-</li>
+            <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navMenu"
+                aria-controls="navMenu"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
 
-</ul>
+                <span class="navbar-toggler-icon"></span>
 
-</div>
+            </button>
 
-</div>
 
-</nav>
+            <div
+                class="collapse navbar-collapse"
+                id="navMenu">
 
-<div class="container mt-5">
-    {% with messages = get_flashed_messages(with_categories=true) %}
 
-{% if messages %}
+                <ul class="navbar-nav ms-auto align-items-lg-center">
 
-{% for category,message in messages %}
 
-<div class="alert alert-{{category}} alert-dismissible fade show">
+                    <li class="nav-item">
 
-{{message}}
+                        <a class="nav-link"
+                           href="/">
 
-<button
-type="button"
-class="btn-close"
-data-bs-dismiss="alert">
-</button>
+                            <i class="fa-solid fa-house me-1"></i>
+                            Home
 
-</div>
+                        </a>
 
-{% endfor %}
+                    </li>
 
-{% endif %}
 
-{% endwith %}
+                    <li class="nav-item">
 
-{% block content %}
-{% endblock %}
+                        <a class="nav-link"
+                           href="/login">
 
-</div>
+                            <i class="fa-solid fa-right-to-bracket me-1"></i>
+                            Login
 
-<footer class="mt-5 bg-dark text-white text-center p-3">
+                        </a>
 
-Student Productivity Manager © 2026
+                    </li>
 
-</footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+                    <li class="nav-item">
+
+                        <a class="nav-link"
+                           href="/register">
+
+                            <i class="fa-solid fa-user-plus me-1"></i>
+                            Register
+
+                        </a>
+
+                    </li>
+
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </nav>
+
+
+    <!-- =========================
+         FLASH MESSAGES
+    ========================== -->
+
+    <div class="container mt-4">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+            {% if messages %}
+
+                {% for category, message in messages %}
+
+                    <div
+                        class="alert alert-{{ category }} alert-dismissible fade show"
+                        role="alert">
+
+                        {{ message }}
+
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Close">
+                        </button>
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+        {% endwith %}
+
+    </div>
+
+
+    <!-- =========================
+         PAGE CONTENT
+    ========================== -->
+
+    {% block content %}
+
+    {% endblock %}
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+
+    <footer class="flow-base-footer">
+
+        <strong>FlowMate</strong>
+        <br>
+
+        <small>
+            Student Productivity Hub © 2026
+        </small>
+
+    </footer>
+
+
+    <!-- Bootstrap JS -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js">
+    </script>
+
 
 </body>
 

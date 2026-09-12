@@ -1,176 +1,837 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Student Productivity Manager</title>
+    <title>Flow Mate | Student Productivity Hub</title>
 
-<link rel="stylesheet"
-href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Favicon -->
+    <link rel="icon"
+          type="image/png"
+          href="{{ url_for('static', filename='images/flowmate(icon).png') }}">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f6f9fc;
+            color: #1f2937;
+        }
+
+        /* =========================
+           NAVBAR
+        ========================= */
+
+        .flow-navbar {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            border-bottom: 1px solid #e8edf3;
+            box-shadow: 0 3px 18px rgba(15, 23, 42, 0.06);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: auto;
+            min-height: 76px;
+            padding: 0 28px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #172033;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 13px;
+            box-shadow: 0 4px 12px rgba(31, 126, 196, 0.15);
+        }
+
+        .brand-name {
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: -0.6px;
+        }
+
+        .brand-flow {
+            color: #172b45;
+        }
+
+        .brand-mate {
+            color: #2dbb78;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #4b5563;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: all 0.25s ease;
+        }
+
+        .nav-links a:hover {
+            background: #eef8f4;
+            color: #22a86b;
+            transform: translateY(-1px);
+        }
+
+        .nav-login {
+            border: 1px solid #dfe6ed;
+        }
+
+        .nav-register {
+            background: linear-gradient(135deg, #2bbf79, #27a96d);
+            color: white !important;
+            box-shadow: 0 5px 14px rgba(43, 191, 121, 0.22);
+        }
+
+        .nav-register:hover {
+            color: white !important;
+            background: linear-gradient(135deg, #25b873, #219e65) !important;
+            transform: translateY(-2px);
+        }
+
+        /* =========================
+           HERO
+        ========================= */
+
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 28px 70px;
+
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+            gap: 55px;
+        }
+
+        .hero-text {
+            animation: fadeUp 0.7s ease both;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+
+            padding: 8px 14px;
+            margin-bottom: 20px;
+
+            border-radius: 50px;
+            background: #eaf9f2;
+            color: #209c64;
+
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .hero-badge i {
+            font-size: 13px;
+        }
+
+        .hero h1 {
+            margin: 0 0 20px;
+
+            font-size: clamp(42px, 5vw, 64px);
+            line-height: 1.08;
+            letter-spacing: -2px;
+
+            color: #172b45;
+        }
+
+        .hero h1 .highlight {
+            color: #2dbb78;
+        }
+
+        .hero-description {
+            max-width: 590px;
+
+            font-size: 18px;
+            line-height: 1.75;
+            color: #667085;
+
+            margin-bottom: 30px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .hero-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+
+            padding: 13px 24px;
+
+            border-radius: 11px;
+            text-decoration: none;
+
+            font-weight: 700;
+            font-size: 16px;
+
+            transition: all 0.25s ease;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #2dbb78, #25a96d);
+            color: white;
+            box-shadow: 0 8px 20px rgba(45, 187, 120, 0.24);
+        }
+
+        .primary-btn:hover {
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(45, 187, 120, 0.30);
+        }
+
+        .secondary-btn {
+            background: white;
+            color: #24364d;
+            border: 1px solid #dce4eb;
+        }
+
+        .secondary-btn:hover {
+            color: #209c64;
+            border-color: #9edcbe;
+            transform: translateY(-3px);
+        }
+
+        /* =========================
+           HERO IMAGE
+        ========================= */
+
+        .hero-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            animation: fadeIn 0.9s ease both;
+        }
+
+        .hero-image-wrapper {
+            width: min(100%, 540px);
+
+            background: white;
+            border-radius: 30px;
+
+            padding: 20px;
+
+            box-shadow:
+                0 20px 50px rgba(31, 43, 61, 0.10),
+                0 5px 15px rgba(31, 43, 61, 0.05);
+
+            transition: transform 0.35s ease, box-shadow 0.35s ease;
+        }
+
+        .hero-image-wrapper:hover {
+            transform: translateY(-6px);
+            box-shadow:
+                0 28px 60px rgba(31, 43, 61, 0.13),
+                0 8px 20px rgba(31, 43, 61, 0.06);
+        }
+
+        .hero-image {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 20px;
+        }
+
+        /* =========================
+           FEATURES
+        ========================= */
+
+        .features {
+            max-width: 1200px;
+            margin: 0 auto;
+
+            padding: 65px 28px 75px;
+        }
+
+        .section-heading {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .section-heading h2 {
+            margin: 0 0 10px;
+            font-size: 36px;
+            color: #172b45;
+        }
+
+        .section-heading p {
+            margin: 0 auto;
+            color: #778399;
+            font-size: 16px;
+            max-width: 600px;
+        }
+
+        .feature-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: white;
+            border: 1px solid #e8edf2;
+            border-radius: 18px;
+
+            padding: 27px 22px;
+
+            min-height: 190px;
+
+            box-shadow: 0 7px 22px rgba(31, 43, 61, 0.045);
+
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease,
+                border-color 0.25s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: #c9eadb;
+            box-shadow: 0 15px 30px rgba(31, 43, 61, 0.09);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 13px;
+            background: #effaf5;
+            color: #25ad70;
+
+            font-size: 21px;
+
+            margin-bottom: 18px;
+        }
+
+        .feature-card h3 {
+            margin: 0 0 10px;
+            font-size: 19px;
+            color: #26384e;
+        }
+
+        .feature-card p {
+            margin: 0;
+            color: #748096;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* =========================
+           STATS
+        ========================= */
+
+        .stats {
+            max-width: 1000px;
+            margin: 0 auto;
+
+            padding: 20px 28px 80px;
+
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+
+            background: white;
+            border: 1px solid #e8edf2;
+            border-radius: 18px;
+
+            padding: 25px 20px;
+
+            box-shadow: 0 7px 20px rgba(31, 43, 61, 0.04);
+        }
+
+        .stat-card h3 {
+            margin: 0;
+            font-size: 34px;
+            color: #2dbb78;
+        }
+
+        .stat-card p {
+            margin: 6px 0 0;
+            color: #778399;
+            font-weight: 600;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        .flow-footer {
+            background: #172b45;
+            color: #d8e0e8;
+            text-align: center;
+
+            padding: 24px 20px;
+        }
+
+        .footer-brand {
+            font-size: 19px;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .footer-brand span {
+            color: #42c98b;
+        }
+
+        .flow-footer p {
+            margin: 0;
+            font-size: 13px;
+            color: #aeb9c7;
+        }
+
+        /* =========================
+           ANIMATIONS
+        ========================= */
+
+        @keyframes fadeUp {
+
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        }
+
+        @keyframes fadeIn {
+
+            from {
+                opacity: 0;
+                transform: scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 900px) {
+
+            .hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+                padding-top: 60px;
+            }
+
+            .hero-description {
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .hero-visual {
+                order: -1;
+            }
+
+            .hero-image-wrapper {
+                max-width: 500px;
+            }
+
+            .feature-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+        }
+
+        @media (max-width: 650px) {
+
+            .nav-inner {
+                min-height: 68px;
+                padding: 0 17px;
+            }
+
+            .brand-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 11px;
+            }
+
+            .brand-name {
+                font-size: 21px;
+            }
+
+            .nav-links {
+                gap: 2px;
+            }
+
+            .nav-links a {
+                padding: 8px 9px;
+                font-size: 13px;
+            }
+
+            .hero {
+                padding: 45px 18px 55px;
+                gap: 35px;
+            }
+
+            .hero h1 {
+                font-size: 40px;
+                letter-spacing: -1.4px;
+            }
+
+            .hero-description {
+                font-size: 16px;
+                line-height: 1.65;
+            }
+
+            .hero-image-wrapper {
+                padding: 12px;
+                border-radius: 22px;
+            }
+
+            .hero-image {
+                border-radius: 15px;
+            }
+
+            .features {
+                padding: 45px 18px 55px;
+            }
+
+            .section-heading h2 {
+                font-size: 30px;
+            }
+
+            .feature-container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+                padding: 10px 18px 60px;
+            }
+
+        }
+
+    </style>
 
 </head>
 
+
 <body>
 
-<nav>
+    <!-- =========================
+         NAVBAR
+    ========================== -->
 
-<div class="logo">
-Flow Mate
-</div>
+    <header class="flow-navbar">
 
-<ul>
+        <div class="nav-inner">
 
-<li><a href="/">Home</a></li>
+            <a href="/" class="brand">
 
-<li><a href="/login">Login</a></li>
+                <img
+                    src="{{ url_for('static', filename='images/flowmate(icon).png') }}"
+                    alt="Flow Mate Logo"
+                    class="brand-icon"
+                >
 
-<li><a href="/register">Register</a></li>
+                <div class="brand-name">
+                    <span class="brand-flow">Flow</span><span class="brand-mate">Mate</span>
+                </div>
 
-</ul>
+            </a>
 
-</nav>
 
+            <ul class="nav-links">
 
+                <li>
+                    <a href="/">Home</a>
+                </li>
 
-<section class="hero">
+                <li>
+                    <a href="/login" class="nav-login">Login</a>
+                </li>
 
-<div class="hero-text">
+                <li>
+                    <a href="/register" class="nav-register">Register</a>
+                </li>
 
-<h1>
-Manage Your Student Life Efficiently
-</h1>
+            </ul>
 
-<p>
+        </div>
 
-Track your study tasks, notes,
-expenses and boost your productivity
-using the Pomodoro Technique.
+    </header>
 
-</p>
 
-<div class="hero-buttons">
+    <!-- =========================
+         HERO SECTION
+    ========================== -->
 
-<a href="/login">
-<button class="primary">
-Login
-</button>
-</a>
+    <main>
 
-<a href="/register">
-<button class="secondary">
-Register
-</button>
-</a>
+        <section class="hero">
 
-</div>
+            <div class="hero-text">
 
-</div>
+                <div class="hero-badge">
+                    <i class="fa-solid fa-bolt"></i>
+                    Student Productivity Hub
+                </div>
 
-</section>
 
+                <h1>
+                    Manage Your
+                    <span class="highlight">Student Life</span>
+                    Efficiently
+                </h1>
 
 
-<section class="features">
+                <p class="hero-description">
 
-<h2>Features</h2>
+                    Organize your tasks, save important notes,
+                    manage your expenses and improve your focus
+                    with powerful productivity tools — all in one place.
 
-<div class="feature-container">
+                </p>
 
-<div class="feature-card">
 
-<h3>📋 Task Manager</h3>
+                <div class="hero-buttons">
 
-<p>
+                    <a href="/login" class="hero-btn primary-btn">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        Login
+                    </a>
 
-Organize daily work with priorities
-and deadlines.
+                    <a href="/register" class="hero-btn secondary-btn">
+                        <i class="fa-solid fa-user-plus"></i>
+                        Create Account
+                    </a>
 
-</p>
+                </div>
 
-</div>
+            </div>
 
-<div class="feature-card">
 
-<h3>📝 Notes</h3>
+            <div class="hero-visual">
 
-<p>
+                <div class="hero-image-wrapper">
 
-Save important lecture notes
-and study material.
+                    <img
+                        src="{{ url_for('static', filename='images/Flowmate.png') }}"
+                        alt="Flow Mate Student Productivity Hub"
+                        class="hero-image"
+                    >
 
-</p>
+                </div>
 
-</div>
+            </div>
 
-<div class="feature-card">
+        </section>
 
-<h3>💰 Expense Tracker</h3>
 
-<p>
+        <!-- =========================
+             FEATURES
+        ========================== -->
 
-Track your monthly spending
-as a student.
+        <section class="features">
 
-</p>
+            <div class="section-heading">
 
-</div>
+                <h2>Everything You Need</h2>
 
-<div class="feature-card">
+                <p>
+                    Simple tools designed to help students stay organized,
+                    focused and financially responsible.
+                </p>
 
-<h3>🍅 Pomodoro</h3>
+            </div>
 
-<p>
 
-Increase focus using
-25-minute study sessions.
+            <div class="feature-container">
 
-</p>
 
-</div>
+                <div class="feature-card">
 
-</div>
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
 
-</section>
+                    <h3>Task Manager</h3>
 
+                    <p>
+                        Organize daily work with priorities,
+                        deadlines and task tracking.
+                    </p>
 
+                </div>
 
-<section class="stats">
 
-<div class="stat-card">
+                <div class="feature-card">
 
-<h1>100%</h1>
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-note-sticky"></i>
+                    </div>
 
-<p>Productivity</p>
+                    <h3>Notes</h3>
 
-</div>
+                    <p>
+                        Save important lecture notes,
+                        study material and documents.
+                    </p>
 
-<div class="stat-card">
+                </div>
 
-<h1>24/7</h1>
 
-<p>Available</p>
+                <div class="feature-card">
 
-</div>
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
 
-<div class="stat-card">
+                    <h3>Expense Tracker</h3>
 
-<h1>4</h1>
+                    <p>
+                        Track your monthly spending
+                        and manage your student budget.
+                    </p>
 
-<p>Powerful Modules</p>
+                </div>
 
-</div>
 
-</section>
+                <div class="feature-card">
 
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
 
+                    <h3>Pomodoro</h3>
 
-<footer>
+                    <p>
+                        Improve your concentration using
+                        focused study sessions.
+                    </p>
 
-Student Productivity Manager © 2026
+                </div>
 
-</footer>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             STATS
+        ========================== -->
+
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <h3>100%</h3>
+
+                <p>Productivity Focus</p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>24/7</h3>
+
+                <p>Available Online</p>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <h3>4</h3>
+
+                <p>Powerful Modules</p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+
+    <footer class="flow-footer">
+
+        <div class="footer-brand">
+            Flow<span>Mate</span>
+        </div>
+
+        <p>
+            Student Productivity Hub © 2026
+        </p>
+
+    </footer>
 
 </body>
+
 </html>
