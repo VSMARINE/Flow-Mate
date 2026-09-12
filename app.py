@@ -10,7 +10,7 @@ from flask import (
 )
 
 from database import create_tables, get_connection
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 
@@ -249,18 +249,160 @@ def register():
 def dashboard():
 
     if "user_id" not in session:
+        flash("Please login first.", "warning")
+        return redirect("/login")
 
-        flash(
-            "Please login first.",
-            "warning"
+    db = get_db()
+    user_id = session["user_id"]
+
+    user = db.users.find_one(
+        {"id": user_id},
+        {"_id": 0, "full_name": 1, "username": 1}
+    ) or {}
+
+    # ------------------------------
+    # TASK STATISTICS
+    # ------------------------------
+    user_tasks = list(
+        db.tasks.find(
+            {"user_id": user_id},
+            {"_id": 0, "status": 1}
+        )
+    )
+
+    total_tasks = len(user_tasks)
+
+    completed_tasks = sum(
+        1 for task in user_tasks
+        if str(task.get("status", "")).strip().lower()
+        in {"completed", "complete", "done"}
+    )
+
+    pending_tasks = max(total_tasks - completed_tasks, 0)
+
+    completion_rate = (
+        round((completed_tasks / total_tasks) * 100)
+        if total_tasks else 0
+    )
+
+    # ------------------------------
+    # NOTES
+    # ------------------------------
+    notes_count = db.notes.count_documents(
+        {"user_id": user_id}
+    )
+
+    # ------------------------------
+    # POMODORO / FOCUS STATISTICS
+    # ------------------------------
+    today = india_now().date()
+    today_string = today.strftime("%Y-%m-%d")
+
+    today_sessions = list(
+        db.pomodoro_sessions.find(
+            {
+                "user_id": user_id,
+                "completed_at": {
+                    "$regex": f"^{today_string}"
+                }
+            },
+            {"_id": 0, "focus_minutes": 1}
+        )
+    )
+
+    focus_minutes_today = sum(
+        int(item.get("focus_minutes", 0) or 0)
+        for item in today_sessions
+    )
+
+    sessions_today = len(today_sessions)
+
+    total_focus_minutes = sum(
+        int(item.get("focus_minutes", 0) or 0)
+        for item in db.pomodoro_sessions.find(
+            {"user_id": user_id},
+            {"_id": 0, "focus_minutes": 1}
+        )
+    )
+
+    total_focus_sessions = db.pomodoro_sessions.count_documents(
+        {"user_id": user_id}
+    )
+
+    total_focus_hours = total_focus_minutes // 60
+    total_focus_remaining_minutes = total_focus_minutes % 60
+
+    # ------------------------------
+    # LAST 7 DAYS FOCUS
+    # ------------------------------
+    week_focus = []
+
+    for days_ago in range(6, -1, -1):
+
+        current_day = today - timedelta(days=days_ago)
+        current_day_string = current_day.strftime("%Y-%m-%d")
+
+        day_sessions = db.pomodoro_sessions.find(
+            {
+                "user_id": user_id,
+                "completed_at": {
+                    "$regex": f"^{current_day_string}"
+                }
+            },
+            {"_id": 0, "focus_minutes": 1}
         )
 
-        return redirect("/login")
+        day_minutes = sum(
+            int(item.get("focus_minutes", 0) or 0)
+            for item in day_sessions
+        )
+
+        week_focus.append({
+            "label": current_day.strftime("%a"),
+            "date": current_day.strftime("%d %b"),
+            "minutes": day_minutes
+        })
+
+    max_week_focus = max(
+        [item["minutes"] for item in week_focus] + [1]
+    )
+
+    for item in week_focus:
+        item["percentage"] = round(
+            (item["minutes"] / max_week_focus) * 100
+        )
 
     return render_template(
         "dashboard.html",
-        username=session["username"]
+        username=session["username"],
+        full_name=user.get("full_name", session["username"]),
+        total_tasks=total_tasks,
+        completed_tasks=completed_tasks,
+        pending_tasks=pending_tasks,
+        completion_rate=completion_rate,
+        notes_count=notes_count,
+        focus_minutes_today=focus_minutes_today,
+        sessions_today=sessions_today,
+        total_focus_minutes=total_focus_minutes,
+        total_focus_hours=total_focus_hours,
+        total_focus_remaining_minutes=total_focus_remaining_minutes,
+        total_focus_sessions=total_focus_sessions,
+        week_focus=week_focus
     )
+
+
+# ==============================
+# LOGOUT
+# ==============================
+
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    flash("You have been logged out successfully.", "success")
+
+    return redirect("/login")
 
 
 # ==============================
