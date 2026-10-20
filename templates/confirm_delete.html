@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Confirm deletion | Flow Mate{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:680px;min-height:45vh">
+    <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
+        <div class="text-danger fs-1 mb-3"><i class="fa-solid fa-trash-can"></i></div>
+        <h1 class="h3 fw-bold">Confirm deletion</h1>
+        <p class="text-secondary">Are you sure you want to permanently delete this {{ item_label }}?</p>
+        <div class="alert alert-light border text-break">{{ item_name }}</div>
+        <form method="post" action="{{ action_url }}" class="d-flex gap-2 flex-wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash me-1"></i>Delete permanently</button>
+            <a href="{{ return_url }}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

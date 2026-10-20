@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from flask import (
     Flask,
     render_template,
@@ -6,7 +11,8 @@ from flask import (
     session,
     flash,
     jsonify,
-    send_from_directory
+    send_from_directory,
+    url_for
 )
 
 from database import create_tables, get_connection
@@ -14,18 +20,51 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from werkzeug.utils import secure_filename
 
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, PyMongoError
+from authlib.integrations.flask_client import OAuth
 
-import os
 import calendar
+import secrets
+import hmac
+from functools import wraps
+from flask import abort
+from werkzeug.exceptions import RequestEntityTooLarge
 
 
 app = Flask(__name__)
 
-app.secret_key = os.getenv(
-    "FLASK_SECRET_KEY",
-    "student_productivity_secret"
-)
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # Request cap; individual files have a stricter 500 KB limit.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+if os.getenv("RENDER"):
+    app.config["SESSION_COOKIE_SECURE"] = True
+
+
+# ==============================
+# GOOGLE OAUTH CONFIGURATION
+# ==============================
+
+oauth = OAuth(app)
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+google = None
+
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    google = oauth.register(
+        name="google",
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url=(
+            "https://accounts.google.com/.well-known/"
+            "openid-configuration"
+        ),
+        client_kwargs={
+            "scope": "openid email profile"
+        }
+    )
 
 
 # ==============================
@@ -45,6 +84,16 @@ ALLOWED_EXTENSIONS = {
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+MAX_FILE_SIZE = 500 * 1024          # 500 KB per file
+MAX_USER_STORAGE = 5 * 1024 * 1024  # 5 MB per user account
+MONGODB_WARNING_BYTES = 450 * 1024 * 1024  # Estimated database usage warning threshold
+MONGODB_UPLOAD_STOP_BYTES = 500 * 1024 * 1024  # Stop uploads before the 512 MB plan limit
+ADMIN_EMAILS = {
+    item.strip().lower()
+    for item in os.getenv("ADMIN_EMAILS", "").split(",")
+    if item.strip()
+}
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -55,6 +104,183 @@ def allowed_file(filename):
         and filename.rsplit(".", 1)[1].lower()
         in ALLOWED_EXTENSIONS
     )
+
+
+def get_upload_size(file):
+    """Return the uploaded file size in bytes without saving it."""
+    current_position = file.stream.tell()
+
+    file.stream.seek(0, os.SEEK_END)
+    size = file.stream.tell()
+
+    file.stream.seek(current_position)
+    return size
+
+
+def get_user_storage_bytes(db, user_id, exclude_note_id=None):
+    """
+    Calculate the user's current document storage from the actual files.
+    Older notes without document_size are supported automatically.
+    """
+    query = {
+        "user_id": user_id,
+        "document_path": {
+            "$exists": True,
+            "$nin": [None, ""]
+        }
+    }
+
+    if exclude_note_id is not None:
+        query["id"] = {"$ne": exclude_note_id}
+
+    total = 0
+
+    for note in db.notes.find(
+        query,
+        {"_id": 0, "document_path": 1, "document_size": 1}
+    ):
+        stored_size = note.get("document_size")
+
+        if stored_size is not None:
+            try:
+                total += int(stored_size)
+                continue
+            except (TypeError, ValueError):
+                pass
+
+        file_path = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            note.get("document_path", "")
+        )
+
+        if os.path.isfile(file_path):
+            total += os.path.getsize(file_path)
+
+    return total
+
+
+def get_database_storage_stats(db):
+    """Return an estimate from MongoDB dbStats; Atlas usage is authoritative in Atlas metrics."""
+    stats = db.command("dbStats", scale=1)
+    data_bytes = int(stats.get("dataSize", 0) or 0)
+    storage_bytes = int(stats.get("storageSize", 0) or 0)
+    index_bytes = int(stats.get("indexSize", 0) or 0)
+    # storageSize + indexSize is a useful operational estimate, not an exact Atlas billing/quota meter.
+    estimated_bytes = storage_bytes + index_bytes
+    if estimated_bytes <= 0:
+        estimated_bytes = data_bytes + index_bytes
+    if estimated_bytes < data_bytes:
+        estimated_bytes = data_bytes + index_bytes
+    if estimated_bytes < 0:
+        estimated_bytes = 0
+    return {
+        "data_bytes": data_bytes,
+        "storage_bytes": storage_bytes,
+        "index_bytes": index_bytes,
+        "estimated_bytes": estimated_bytes,
+        "estimated_mb": estimated_bytes / (1024 * 1024),
+        "warning": estimated_bytes >= MONGODB_WARNING_BYTES,
+        "uploads_restricted": estimated_bytes >= MONGODB_UPLOAD_STOP_BYTES,
+        "status": (
+            "restricted" if estimated_bytes >= MONGODB_UPLOAD_STOP_BYTES
+            else "warning" if estimated_bytes >= MONGODB_WARNING_BYTES
+            else "normal"
+        ),
+    }
+
+
+def user_is_admin():
+    email = str(session.get("email", "")).strip().lower()
+    return bool(email and email in ADMIN_EMAILS)
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        if not user_is_admin():
+            abort(403)
+        return view_func(*args, **kwargs)
+    return wrapped
+
+
+def format_bytes(num_bytes):
+    value = float(max(0, int(num_bytes or 0)))
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024 or unit == "GB":
+            return f"{value:.1f} {unit}" if unit != "B" else f"{int(value)} B"
+        value /= 1024
+    return f"{value:.1f} GB"
+
+
+def validate_uploaded_file(file, db, user_id, exclude_note_id=None):
+    """
+    Validate extension, 500 KB individual limit and 5 MB per-user limit.
+    Returns (True, file_size, "") when valid.
+    """
+    if not file or not file.filename:
+        return True, 0, ""
+
+    if not allowed_file(file.filename):
+        return (
+            False,
+            0,
+            "Invalid file type! Please upload PDF, DOC, DOCX, PPT, PPTX or TXT."
+        )
+
+    file_size = get_upload_size(file)
+
+    if file_size > MAX_FILE_SIZE:
+        return (
+            False,
+            file_size,
+            "File size cannot exceed 500 KB."
+        )
+
+    try:
+        global_stats = get_database_storage_stats(db)
+    except Exception:
+        app.logger.exception("Could not verify MongoDB storage before upload")
+        return (
+            False,
+            file_size,
+            "Storage capacity could not be verified right now. Please try again later."
+        )
+
+    if global_stats["uploads_restricted"]:
+        return (
+            False,
+            file_size,
+            "New uploads are temporarily disabled because the service storage is nearly full. Please try again later."
+        )
+
+    current_storage = get_user_storage_bytes(
+        db,
+        user_id,
+        exclude_note_id=exclude_note_id
+    )
+
+    if current_storage + file_size > MAX_USER_STORAGE:
+        remaining = max(
+            MAX_USER_STORAGE - current_storage,
+            0
+        )
+
+        if remaining == 0:
+            message = (
+                "Your 5 MB storage limit has been reached. "
+                "Delete an existing document before uploading another file."
+            )
+        else:
+            message = (
+                "This file cannot be uploaded because it exceeds "
+                f"your remaining storage of {remaining / 1024:.0f} KB."
+            )
+
+        return False, file_size, message
+
+    return True, file_size, ""
 
 
 # ==============================
@@ -117,6 +343,40 @@ def documents_to_dicts(documents):
 create_tables()
 
 
+@app.context_processor
+def inject_template_flags():
+    return {"is_admin": user_is_admin()}
+
+
+@app.errorhandler(PyMongoError)
+def handle_database_error(error):
+    app.logger.exception("Database operation failed")
+    return render_template(
+        "error.html",
+        error_title="Service temporarily unavailable",
+        error_message="The database could not complete this request. Please try again in a moment. If the issue continues, contact the site administrator."
+    ), 503
+
+
+@app.errorhandler(403)
+def handle_forbidden(error):
+    return render_template(
+        "error.html",
+        error_title="Access denied",
+        error_message="You do not have permission to access this page."
+    ), 403
+
+
+@app.errorhandler(500)
+def handle_internal_error(error):
+    app.logger.error("Unhandled server error: %s", error)
+    return render_template(
+        "error.html",
+        error_title="Something went wrong",
+        error_message="The request could not be completed. Your existing data has not intentionally been deleted. Please try again."
+    ), 500
+
+
 # ==============================
 # HOME
 # ==============================
@@ -127,118 +387,373 @@ def home():
 
 
 # ==============================
-# LOGIN
+# GOOGLE LOGIN / REGISTER
 # ==============================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
-
-        username = request.form["username"].strip()
-        password = request.form["password"]
-
-        db = get_db()
-
-        user = db.users.find_one({
-            "username": username,
-            "password": password
-        })
-
-        if user:
-
-            session["user_id"] = user["id"]
-            session["username"] = user["username"]
-
-            flash(
-                "Login Successful!",
-                "success"
-            )
-
-            return redirect("/dashboard")
-
         flash(
-            "Invalid Username or Password",
-            "danger"
+            "Please use Continue with Google. Flow Mate only accepts verified Gmail accounts.",
+            "warning"
         )
-
         return redirect("/login")
 
     return render_template("login.html")
 
 
-# ==============================
-# REGISTER
-# ==============================
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
-
     if request.method == "POST":
+        flash(
+            "Please use Continue with Google. Flow Mate only accepts verified Gmail accounts.",
+            "warning"
+        )
+        return redirect("/register")
 
-        fullname = request.form["fullname"].strip()
-        email = request.form["email"].strip()
-        username = request.form["username"].strip()
-        password = request.form["password"]
+    return render_template("register.html")
 
-        db = get_db()
 
-        if db.users.find_one({
-            "username": username
-        }):
+@app.route("/google/login")
+def google_login():
+    if google is None:
+        flash(
+            "Google login is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
+            "danger"
+        )
+        return redirect("/login")
 
-            flash(
-                "Username already exists!",
-                "danger"
-            )
+    session["google_auth_mode"] = "login"
 
-            return redirect("/register")
+    redirect_uri = url_for(
+        "google_callback",
+        _external=True
+    )
 
-        if db.users.find_one({
-            "email": email
-        }):
+    return google.authorize_redirect(
+        redirect_uri,
+        prompt="select_account"
+    )
 
-            flash(
-                "Email already registered!",
-                "danger"
-            )
 
-            return redirect("/register")
+@app.route("/google/register")
+def google_register():
+    if google is None:
+        flash(
+            "Google registration is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
+            "danger"
+        )
+        return redirect("/register")
 
-        user_document = {
-            "id": next_id("users"),
-            "full_name": fullname,
-            "email": email,
-            "username": username,
-            "password": password,
-            "created_at": india_now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-        }
+    session["google_auth_mode"] = "register"
 
-        try:
+    redirect_uri = url_for(
+        "google_callback",
+        _external=True
+    )
 
-            db.users.insert_one(
-                user_document
-            )
+    return google.authorize_redirect(
+        redirect_uri,
+        prompt="select_account"
+    )
 
-        except DuplicateKeyError:
 
-            flash(
-                "Username or email already exists!",
-                "danger"
-            )
+@app.route("/auth/google/callback")
+def google_callback():
+    if google is None:
+        flash(
+            "Google login is not configured yet.",
+            "danger"
+        )
+        return redirect("/login")
 
-            return redirect("/register")
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get("userinfo")
+
+        if not user_info:
+            user_info = google.userinfo()
+
+    except Exception:
+        flash(
+            "Google authentication failed. Please try again.",
+            "danger"
+        )
+        return redirect("/login")
+
+    auth_mode = session.get("google_auth_mode", "login")
+
+    email = str(
+        user_info.get("email", "")
+    ).strip().lower()
+
+    email_verified = user_info.get(
+        "email_verified",
+        False
+    )
+
+    # Only real, Google-verified Gmail addresses are accepted.
+    if (
+        not email
+        or not email.endswith("@gmail.com")
+        or email_verified is not True
+    ):
+        flash(
+            "Only verified Google Gmail accounts (@gmail.com) can use Flow Mate.",
+            "danger"
+        )
+        return redirect("/login")
+
+    google_sub = str(
+        user_info.get("sub", "")
+    ).strip()
+
+    if not google_sub:
+        flash(
+            "Google account verification failed. Please try again.",
+            "danger"
+        )
+        return redirect("/login")
+
+    full_name = str(
+        user_info.get("name")
+        or email.split("@")[0]
+    ).strip()
+
+    db = get_db()
+
+    # Existing account: authenticate only after Google has verified ownership.
+    user = db.users.find_one({
+        "email": email
+    })
+
+    if user:
+        stored_google_sub = str(user.get("google_sub", "") or "").strip()
+        if stored_google_sub and stored_google_sub != google_sub:
+            app.logger.warning("Google subject mismatch for existing email account")
+            flash("This Gmail account could not be linked safely. Please contact the site administrator.", "danger")
+            return redirect(url_for("login"))
+
+        db.users.update_one(
+            {"id": user["id"]},
+            {
+                "$set": {
+                    "google_sub": google_sub,
+                    "google_verified": True,
+                    "email_verified": True,
+                    "auth_provider": "google"
+                }
+            }
+        )
+
+        session.clear()
+        session["user_id"] = user["id"]
+        session["username"] = user["username"]
+        session["email"] = email
 
         flash(
-            "Registration Successful. Please Login.",
+            "Login Successful!",
             "success"
         )
 
-        return redirect("/login")
+        return redirect("/dashboard")
 
-    return render_template("register.html")
+    # Login and registration remain distinct actions.
+    if auth_mode == "login":
+        flash("No Flow Mate account exists for this Gmail yet. Please use Register first.", "warning")
+        return redirect(url_for("register"))
+
+    # New Google account: create the Flow Mate account automatically.
+    username_base = email.split("@")[0]
+    username = username_base
+
+    counter = 1
+
+    while db.users.find_one({
+        "username": username
+    }):
+        counter += 1
+        username = f"{username_base}{counter}"
+
+    user_document = {
+        "id": next_id("users"),
+        "full_name": full_name,
+        "email": email,
+        "username": username,
+        "password": None,
+        "google_sub": google_sub,
+        "google_verified": True,
+        "email_verified": True,
+        "auth_provider": "google",
+        "created_at": india_now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+    }
+
+    try:
+        db.users.insert_one(user_document)
+
+    except DuplicateKeyError:
+        # A simultaneous Google registration may have created the account.
+        user = db.users.find_one({
+            "email": email
+        })
+
+        if not user:
+            flash(
+                "Could not create your account. Please try again.",
+                "danger"
+            )
+            return redirect("/register")
+
+        session.clear()
+        session["user_id"] = user["id"]
+        session["username"] = user["username"]
+        session["email"] = email
+
+        flash(
+            "Login Successful!",
+            "success"
+        )
+
+        return redirect("/dashboard")
+
+    session.clear()
+    session["user_id"] = user_document["id"]
+    session["username"] = user_document["username"]
+    session["email"] = email
+
+    flash(
+        "Registration Successful! Welcome to Flow Mate.",
+        "success"
+    )
+
+    return redirect("/dashboard")
+
+
+# ==============================
+# ADMIN PANEL
+# ==============================
+
+@app.route("/admin", methods=["GET"])
+@admin_required
+def admin_panel():
+    db = get_db()
+    users = []
+    for user in db.users.find({}, {"_id": 0, "id": 1, "full_name": 1, "username": 1, "email": 1, "created_at": 1}):
+        user_id = user.get("id")
+        user["storage_bytes"] = get_user_storage_bytes(db, user_id)
+        user["storage_text"] = format_bytes(user["storage_bytes"])
+        user["is_admin"] = str(user.get("email", "")).lower() in ADMIN_EMAILS
+        users.append(user)
+    users.sort(key=lambda item: str(item.get("email", "")).lower())
+    total_uploaded_bytes = sum(item["storage_bytes"] for item in users)
+
+    try:
+        storage_stats = get_database_storage_stats(db)
+        storage_stats["estimated_text"] = format_bytes(storage_stats["estimated_bytes"])
+        storage_stats["warning_text"] = format_bytes(MONGODB_WARNING_BYTES)
+        storage_stats["stop_text"] = format_bytes(MONGODB_UPLOAD_STOP_BYTES)
+        storage_error = None
+    except Exception:
+        app.logger.exception("Could not read MongoDB storage statistics for admin panel")
+        storage_stats = None
+        storage_error = "MongoDB storage statistics are temporarily unavailable. Check Atlas metrics for authoritative usage."
+
+    session.setdefault("admin_csrf_token", secrets.token_urlsafe(32))
+    return render_template(
+        "admin.html",
+        users=users,
+        storage_stats=storage_stats,
+        storage_error=storage_error,
+        admin_csrf_token=session["admin_csrf_token"],
+        user_count=len(users),
+        total_uploaded_bytes=total_uploaded_bytes,
+        total_uploaded_text=format_bytes(total_uploaded_bytes),
+        format_bytes=format_bytes,
+    )
+
+
+@app.route("/admin/users/<int:user_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_user(user_id):
+    submitted_token = request.form.get("csrf_token", "")
+    expected_token = session.get("admin_csrf_token", "")
+    if not expected_token or not submitted_token or not hmac.compare_digest(submitted_token, expected_token):
+        abort(400, description="Invalid security token. Refresh the Admin Panel and try again.")
+
+    db = get_db()
+    target = db.users.find_one({"id": user_id})
+    if not target:
+        flash("User not found.", "warning")
+        return redirect(url_for("admin_panel"))
+
+    target_email = str(target.get("email", "")).strip().lower()
+    if target_email in ADMIN_EMAILS:
+        flash("Admin accounts cannot be deleted from this panel.", "danger")
+        return redirect(url_for("admin_panel"))
+
+    # Record file names first; do not remove files until database deletions succeed.
+    notes = list(db.notes.find(
+        {"user_id": user_id},
+        {"_id": 0, "document_path": 1}
+    ))
+    stored_names = []
+    for note in notes:
+        stored_name = note.get("document_path")
+        if not stored_name:
+            continue
+        safe_name = os.path.basename(str(stored_name))
+        if safe_name == str(stored_name):
+            stored_names.append(safe_name)
+        else:
+            app.logger.warning("Skipped unsafe stored upload path while deleting user id=%s", user_id)
+
+    # Delete every collection that stores user-owned data, then the account itself.
+    for collection_name in (
+        "tasks", "notes", "expenses", "monthly_income",
+        "category_budgets", "pomodoro_sessions"
+    ):
+        db[collection_name].delete_many({"user_id": user_id})
+
+    db.users.delete_one({"id": user_id})
+
+    # Clean the recorded files plus any orphaned uploads using this app's user-id prefix.
+    names_to_remove = set(stored_names)
+    try:
+        for entry in os.scandir(app.config["UPLOAD_FOLDER"]):
+            if entry.is_file() and entry.name.startswith(f"{user_id}_"):
+                names_to_remove.add(entry.name)
+    except OSError:
+        app.logger.exception("Could not scan upload directory during account deletion")
+
+    for safe_name in names_to_remove:
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
+        try:
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        except OSError:
+            app.logger.exception("Could not remove uploaded file during user deletion: %s", safe_name)
+
+    flash(
+        f"User {target_email or user_id} and associated application records were deleted.",
+        "success"
+    )
+    return redirect(url_for("admin_panel"))
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_request_too_large(error):
+    if request.path == "/add_note":
+        flash("The upload request is too large. Each document must be 500 KB or smaller.", "danger")
+        return redirect(url_for("notes"))
+    if request.path.startswith("/update_note/"):
+        flash("The upload request is too large. Each document must be 500 KB or smaller.", "danger")
+        note_id = request.path.rsplit("/", 1)[-1]
+        if note_id.isdigit():
+            return redirect(url_for("edit_note", id=int(note_id)))
+        return redirect(url_for("notes"))
+    return "Request too large. Please reduce the submitted data and try again.", 413
 
 
 # ==============================
@@ -477,25 +992,36 @@ def add_task():
 # DELETE TASK
 # ==============================
 
-@app.route("/delete_task/<int:id>")
+@app.route("/delete_task/<int:id>", methods=["GET", "POST"])
 def delete_task(id):
-
     if "user_id" not in session:
-        return redirect("/login")
+        return redirect(url_for("login"))
 
     db = get_db()
+    task = db.tasks.find_one({"id": id, "user_id": session["user_id"]})
+    if not task:
+        flash("Task not found.", "warning")
+        return redirect(url_for("tasks"))
 
-    db.tasks.delete_one({
-        "id": id,
-        "user_id": session["user_id"]
-    })
+    if request.method == "GET":
+        session.setdefault("delete_csrf_token", secrets.token_urlsafe(32))
+        return render_template(
+            "confirm_delete.html",
+            item_label="task",
+            item_name=task.get("title", "this task"),
+            action_url=url_for("delete_task", id=id),
+            return_url=url_for("tasks"),
+            csrf_token=session["delete_csrf_token"],
+        )
 
-    flash(
-        "Task Deleted!",
-        "danger"
-    )
+    token = request.form.get("csrf_token", "")
+    expected = session.get("delete_csrf_token", "")
+    if not expected or not token or not hmac.compare_digest(token, expected):
+        abort(400, description="Invalid security token. Return to the list and try again.")
 
-    return redirect("/tasks")
+    db.tasks.delete_one({"id": id, "user_id": session["user_id"]})
+    flash("Task deleted successfully.", "success")
+    return redirect(url_for("tasks"))
 
 
 # ==============================
@@ -619,23 +1145,23 @@ def add_note():
 
     document_name = None
     document_path = None
+    document_size = 0
 
+    db = get_db()
     file = request.files.get("document")
 
     if file and file.filename != "":
+        valid, document_size, error_message = validate_uploaded_file(
+            file,
+            db,
+            session["user_id"]
+        )
 
-        if not allowed_file(file.filename):
-
-            flash(
-                "Invalid file type! Please upload PDF, DOC, DOCX, PPT, PPTX or TXT.",
-                "danger"
-            )
-
+        if not valid:
+            flash(error_message, "danger")
             return redirect("/notes")
 
-        document_name = secure_filename(
-            file.filename
-        )
+        document_name = secure_filename(file.filename)
 
         timestamp = india_now().strftime(
             "%Y%m%d%H%M%S%f"
@@ -656,8 +1182,6 @@ def add_note():
             )
         )
 
-    db = get_db()
-
     db.notes.insert_one({
         "id": next_id("notes"),
         "user_id": session["user_id"],
@@ -665,6 +1189,7 @@ def add_note():
         "content": content,
         "document_name": document_name,
         "document_path": document_path,
+        "document_size": document_size,
         "created_at": india_now().strftime(
             "%Y-%m-%d %H:%M:%S"
         )
@@ -760,55 +1285,47 @@ def download_document(id):
 # DELETE NOTE
 # ==============================
 
-@app.route("/delete_note/<int:id>")
+@app.route("/delete_note/<int:id>", methods=["GET", "POST"])
 def delete_note(id):
-
     if "user_id" not in session:
-        return redirect("/login")
+        return redirect(url_for("login"))
 
     db = get_db()
-
-    note = db.notes.find_one({
-        "id": id,
-        "user_id": session["user_id"]
-    })
-
-    note = document_to_dict(note)
-
+    note = document_to_dict(db.notes.find_one({"id": id, "user_id": session["user_id"]}))
     if note is None:
+        flash("Note not found!", "warning")
+        return redirect(url_for("notes"))
 
-        flash(
-            "Note not found!",
-            "danger"
+    if request.method == "GET":
+        session.setdefault("delete_csrf_token", secrets.token_urlsafe(32))
+        return render_template(
+            "confirm_delete.html",
+            item_label="note",
+            item_name=note.get("title", "this note"),
+            action_url=url_for("delete_note", id=id),
+            return_url=url_for("notes"),
+            csrf_token=session["delete_csrf_token"],
         )
 
-        return redirect("/notes")
+    token = request.form.get("csrf_token", "")
+    expected = session.get("delete_csrf_token", "")
+    if not expected or not token or not hmac.compare_digest(token, expected):
+        abort(400, description="Invalid security token. Return to the notes list and try again.")
 
-    db.notes.delete_one({
-        "id": id,
-        "user_id": session["user_id"]
-    })
-
-    document_path = note.get(
-        "document_path"
-    )
-
+    db.notes.delete_one({"id": id, "user_id": session["user_id"]})
+    document_path = note.get("document_path")
     if document_path:
+        safe_name = os.path.basename(str(document_path))
+        if safe_name == str(document_path):
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_name)
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            except OSError:
+                app.logger.exception("Could not remove note attachment after note deletion")
 
-        file_path = os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            document_path
-        )
-
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-    flash(
-        "Note Deleted Successfully!",
-        "danger"
-    )
-
-    return redirect("/notes")
+    flash("Note deleted successfully.", "success")
+    return redirect(url_for("notes"))
 
 
 # ==============================
@@ -873,12 +1390,10 @@ def update_note(id):
     )
 
     if existing_note is None:
-
         flash(
             "Note not found!",
             "danger"
         )
-
         return redirect("/notes")
 
     document_name = existing_note.get(
@@ -889,30 +1404,30 @@ def update_note(id):
         "document_path"
     )
 
+    document_size = int(
+        existing_note.get("document_size", 0) or 0
+    )
+
     file = request.files.get("document")
 
     if file and file.filename != "":
+        valid, new_document_size, error_message = validate_uploaded_file(
+            file,
+            db,
+            session["user_id"],
+            exclude_note_id=id
+        )
 
-        if not allowed_file(file.filename):
+        if not valid:
+            flash(error_message, "danger")
+            return redirect(f"/edit_note/{id}")
 
-            flash(
-                "Invalid file type! Please upload PDF, DOC, DOCX, PPT, PPTX or TXT.",
-                "danger"
-            )
-
-            return redirect(
-                f"/edit_note/{id}"
-            )
+        old_file_path = None
 
         if document_path:
-
-            old_file_path = os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                document_path
-            )
-
-            if os.path.exists(old_file_path):
-                os.remove(old_file_path)
+            safe_old_name = os.path.basename(str(document_path))
+            if safe_old_name == str(document_path):
+                old_file_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_old_name)
 
         document_name = secure_filename(
             file.filename
@@ -928,14 +1443,20 @@ def update_note(id):
             f"{document_name}"
         )
 
-        document_path = unique_filename
-
-        file.save(
-            os.path.join(
-                app.config["UPLOAD_FOLDER"],
-                unique_filename
-            )
+        new_document_path = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            unique_filename
         )
+
+        # Save the new file first. The old file is removed only after
+        # the new file has been successfully written.
+        file.save(new_document_path)
+
+        if old_file_path and os.path.exists(old_file_path):
+            os.remove(old_file_path)
+
+        document_path = unique_filename
+        document_size = new_document_size
 
     db.notes.update_one(
         {
@@ -947,7 +1468,8 @@ def update_note(id):
                 "title": title,
                 "content": content,
                 "document_name": document_name,
-                "document_path": document_path
+                "document_path": document_path,
+                "document_size": document_size
             }
         }
     )
@@ -1577,25 +2099,36 @@ def view_expense(id):
 # DELETE EXPENSE
 # ==============================
 
-@app.route("/delete_expense/<int:id>")
+@app.route("/delete_expense/<int:id>", methods=["GET", "POST"])
 def delete_expense(id):
-
     if "user_id" not in session:
-        return redirect("/login")
+        return redirect(url_for("login"))
 
     db = get_db()
+    expense = db.expenses.find_one({"id": id, "user_id": session["user_id"]})
+    if not expense:
+        flash("Expense not found.", "warning")
+        return redirect(url_for("expenses"))
 
-    db.expenses.delete_one({
-        "id": id,
-        "user_id": session["user_id"]
-    })
+    if request.method == "GET":
+        session.setdefault("delete_csrf_token", secrets.token_urlsafe(32))
+        return render_template(
+            "confirm_delete.html",
+            item_label="expense",
+            item_name=expense.get("description") or expense.get("category", "this expense"),
+            action_url=url_for("delete_expense", id=id),
+            return_url=url_for("expenses"),
+            csrf_token=session["delete_csrf_token"],
+        )
 
-    flash(
-        "Expense Deleted Successfully!",
-        "danger"
-    )
+    token = request.form.get("csrf_token", "")
+    expected = session.get("delete_csrf_token", "")
+    if not expected or not token or not hmac.compare_digest(token, expected):
+        abort(400, description="Invalid security token. Return to expenses and try again.")
 
-    return redirect("/expenses")
+    db.expenses.delete_one({"id": id, "user_id": session["user_id"]})
+    flash("Expense deleted successfully.", "success")
+    return redirect(url_for("expenses"))
 
 
 # ==============================

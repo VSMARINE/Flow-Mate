@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Login | Flow Mate</title>
 
     <link rel="icon" type="image/png"
@@ -156,69 +155,54 @@
         .form-subtitle {
             color:#7a8798;
             margin-bottom:28px;
+            line-height:1.6;
         }
 
-        .field {
-            margin-bottom:19px;
-        }
-
-        .field label {
-            display:block;
-            margin-bottom:8px;
-            color:#344054;
-            font-size:14px;
-            font-weight:700;
-        }
-
-        .input-wrap {
-            position:relative;
-        }
-
-        .input-wrap i {
-            position:absolute;
-            left:15px;
-            top:50%;
-            transform:translateY(-50%);
-            color:#98a5b5;
-            pointer-events:none;
-        }
-
-        .input-wrap input {
+        .google-button {
             width:100%;
-            height:50px;
-            border:1px solid #dce4eb;
+            min-height:52px;
+            border:1px solid #d9e1e8;
             border-radius:11px;
-            padding:0 15px 0 43px;
-            outline:none;
-            color:#26384e;
-            background:#fbfcfd;
-            transition:.2s ease;
-        }
-
-        .input-wrap input:focus {
-            border-color:#4cc48d;
             background:white;
-            box-shadow:0 0 0 4px rgba(45,187,120,.10);
+            color:#26384e;
+            font-size:15px;
+            font-weight:700;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:12px;
+            text-decoration:none;
+            transition:.2s ease;
+            box-shadow:0 4px 12px rgba(15,23,42,.05);
         }
 
-        .login-button {
-            width:100%;
-            height:50px;
-            border:0;
+        .google-button:hover {
+            background:#f8fafc;
+            border-color:#bfcbd6;
+            transform:translateY(-1px);
+            color:#172b45;
+            box-shadow:0 7px 18px rgba(15,23,42,.08);
+        }
+
+        .google-icon {
+            font-size:18px;
+            color:#4285f4;
+        }
+
+        .security-note {
+            margin:18px 0 0;
+            padding:13px 14px;
             border-radius:11px;
-            background:linear-gradient(135deg,#2dbb78,#25a96d);
-            color:white;
-            font-size:16px;
-            font-weight:750;
-            box-shadow:0 8px 20px rgba(45,187,120,.22);
-            cursor:pointer;
-            transition:.25s ease;
-            margin-top:4px;
+            background:#f4faf7;
+            color:#5d7468;
+            font-size:13px;
+            line-height:1.55;
+            text-align:center;
         }
 
-        .login-button:hover {
-            transform:translateY(-2px);
-            box-shadow:0 12px 25px rgba(45,187,120,.28);
+        .security-note i {
+            color:#209d64;
+            margin-right:5px;
         }
 
         .register-text {
@@ -266,7 +250,6 @@
 
 <header class="login-nav">
     <div class="login-nav-inner">
-
         <a href="/" class="brand">
             <img src="{{ url_for('static', filename='images/flowmate(icon).png') }}"
                  alt="Flow Mate">
@@ -279,7 +262,6 @@
             <i class="fa-solid fa-house me-1"></i>
             Home
         </a>
-
     </div>
 </header>
 
@@ -299,11 +281,9 @@
 {% endwith %}
 
 <main class="login-page">
-
     <section class="login-shell">
 
         <div class="login-brand-panel">
-
             <img src="{{ url_for('static', filename='images/Flowmate.png') }}"
                  alt="Flow Mate Student Productivity Hub">
 
@@ -313,73 +293,38 @@
                 Keep your tasks organized, your focus strong
                 and your student life moving forward.
             </p>
-
         </div>
 
         <div class="login-form-panel">
-
             <div class="form-content">
 
                 <h2>Sign in</h2>
 
                 <p class="form-subtitle">
-                    Access your Flow Mate productivity dashboard.
+                    Sign in securely using your verified Google Gmail account.
                 </p>
 
-                <form method="POST" action="/login">
+                <a href="/google/login" class="google-button">
+                    <i class="fa-brands fa-google google-icon"></i>
+                    Continue with Google
+                </a>
 
-                    <div class="field">
-                        <label for="username">Username</label>
-
-                        <div class="input-wrap">
-                            <i class="fa-solid fa-user"></i>
-
-                            <input
-                                type="text"
-                                id="username"
-                                name="username"
-                                placeholder="Enter your username"
-                                autocomplete="username"
-                                required>
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label for="password">Password</label>
-
-                        <div class="input-wrap">
-                            <i class="fa-solid fa-lock"></i>
-
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                placeholder="Enter your password"
-                                autocomplete="current-password"
-                                required>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="login-button">
-                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>
-                        Login to Flow Mate
-                    </button>
-
-                </form>
+                <div class="security-note">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Only Google-verified <strong>@gmail.com</strong> accounts
+                    are accepted.
+                </div>
 
                 <p class="register-text">
                     Don't have an account?
-                    <a href="/register">Create one</a>
+                    <a href="/register">Create one with Google</a>
                 </p>
 
             </div>
-
         </div>
 
     </section>
-
 </main>
-
 
 <script>
     setTimeout(function () {
@@ -395,7 +340,6 @@
         });
     }, 3000);
 </script>
-
 
 </body>
 </html>

@@ -1,129 +1,159 @@
 {% extends "base.html" %}
 
-{% block title %}
-
-Register
-
-{% endblock %}
+{% block title %}Register | Flow Mate{% endblock %}
 
 {% block content %}
 
-<div class="row justify-content-center">
+<style>
+    .register-page {
+        min-height:calc(100vh - 150px);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:45px 20px;
+    }
 
-<div class="col-md-6">
+    .register-card {
+        width:min(760px, 100%);
+        background:white;
+        border:1px solid #e5ebf0;
+        border-radius:24px;
+        padding:45px;
+        box-shadow:0 20px 55px rgba(31,43,61,.09);
+        text-align:center;
+    }
 
-<div class="card shadow-lg border-0 rounded-4">
+    .register-icon {
+        width:68px;
+        height:68px;
+        margin:0 auto 18px;
+        border-radius:18px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#edf9f4;
+        color:#209d64;
+        font-size:27px;
+    }
 
-<div class="card-body p-5">
+    .register-card h1 {
+        margin:0 0 9px;
+        color:#172b45;
+        font-size:30px;
+        font-weight:800;
+    }
 
-<h2 class="text-center mb-4">
+    .register-subtitle {
+        max-width:540px;
+        margin:0 auto 28px;
+        color:#718096;
+        line-height:1.65;
+    }
 
-<i class="fas fa-user-plus text-success"></i>
+    .google-register {
+        width:min(430px,100%);
+        min-height:52px;
+        margin:0 auto;
+        border:1px solid #d9e1e8;
+        border-radius:11px;
+        background:white;
+        color:#26384e;
+        font-size:15px;
+        font-weight:700;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:12px;
+        text-decoration:none;
+        transition:.2s ease;
+        box-shadow:0 4px 12px rgba(15,23,42,.05);
+    }
 
-Create Account
+    .google-register:hover {
+        background:#f8fafc;
+        border-color:#bfcbd6;
+        transform:translateY(-1px);
+        color:#172b45;
+        box-shadow:0 7px 18px rgba(15,23,42,.08);
+    }
 
-</h2>
+    .google-register i {
+        color:#4285f4;
+        font-size:18px;
+    }
 
-<form method="POST">
+    .verified-box {
+        width:min(560px,100%);
+        margin:22px auto 0;
+        padding:16px 18px;
+        border-radius:13px;
+        background:#f4faf7;
+        color:#5d7468;
+        font-size:13px;
+        line-height:1.6;
+    }
 
-<div class="mb-3">
+    .verified-box i {
+        color:#209d64;
+        margin-right:5px;
+    }
 
-<label class="form-label">
+    .login-link {
+        margin-top:25px;
+        color:#7a8798;
+        font-size:14px;
+    }
 
-Full Name
+    .login-link a {
+        color:#209d64;
+        text-decoration:none;
+        font-weight:700;
+    }
 
-</label>
+    .login-link a:hover {
+        text-decoration:underline;
+    }
 
-<input
-type="text"
-name="fullname"
-class="form-control form-control-lg"
-required>
+    @media(max-width:600px) {
+        .register-page { padding:30px 15px; }
+        .register-card { padding:35px 22px; }
+        .register-card h1 { font-size:26px; }
+    }
+</style>
 
-</div>
+<div class="register-page">
+    <section class="register-card">
 
-<div class="mb-3">
+        <div class="register-icon">
+            <i class="fa-solid fa-user-plus"></i>
+        </div>
 
-<label class="form-label">
+        <h1>Create your Flow Mate account</h1>
 
-Email
+        <p class="register-subtitle">
+            Your account is created using Google verification.
+            Flow Mate accepts only genuine, Google-verified
+            <strong>@gmail.com</strong> accounts.
+        </p>
 
-</label>
+        <a href="/google/register" class="google-register">
+            <i class="fa-brands fa-google"></i>
+            Continue with Google
+        </a>
 
-<input
-type="email"
-name="email"
-class="form-control form-control-lg"
-required>
+        <div class="verified-box">
+            <i class="fa-solid fa-circle-check"></i>
+            Google verifies the Gmail account before Flow Mate creates
+            your account. Your name and verified Gmail address are taken
+            directly from Google.
+        </div>
 
-</div>
+        <p class="login-link">
+            Already have an account?
+            <a href="/login">Login with Google</a>
+        </p>
 
-<div class="mb-3">
-
-<label class="form-label">
-
-Username
-
-</label>
-
-<input
-type="text"
-name="username"
-class="form-control form-control-lg"
-required>
-
-</div>
-
-<div class="mb-4">
-
-<label class="form-label">
-
-Password
-
-</label>
-
-<input
-type="password"
-name="password"
-class="form-control form-control-lg"
-required>
-
-</div>
-
-<div class="d-grid">
-
-<button class="btn btn-success btn-lg">
-
-<i class="fas fa-user-check"></i>
-
-Create Account
-
-</button>
-
-</div>
-
-</form>
-
-<hr>
-
-<p class="text-center">
-
-Already have an account?
-
-<a href="/login">
-
-Login
-
-</a>
-
-</p>
-
-</div>
-
-</div>
-
-</div>
-
+    </section>
 </div>
 
 {% endblock %}

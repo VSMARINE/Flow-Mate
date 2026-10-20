@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel | Flow Mate{% endblock %}
+
+{% block head %}
+<style>
+.admin-wrap{max-width:1250px;margin:35px auto;padding:0 18px}
+.admin-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:22px}
+.admin-heading h1{font-size:clamp(1.7rem,3vw,2.2rem);font-weight:800;color:#172b45;margin:0}
+.admin-card{background:#fff;border:1px solid #e7edf2;border-radius:16px;padding:22px;box-shadow:0 7px 24px rgba(15,23,42,.05);height:100%}
+.admin-label{font-size:.88rem;color:#64748b;margin-bottom:7px}
+.admin-value{font-size:1.8rem;font-weight:800;color:#172b45;overflow-wrap:anywhere}
+.admin-sub{font-size:.85rem;color:#64748b;margin-top:7px}
+.admin-table-wrap{overflow-x:auto}
+.admin-table{vertical-align:middle;min-width:780px}
+.admin-table thead th{font-size:.82rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-pill{display:inline-block;padding:5px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
+.status-normal{background:#e8f8ef;color:#18794e}.status-warning{background:#fff4d6;color:#8a5a00}.status-restricted{background:#fee2e2;color:#b42318}
+.admin-note{font-size:.88rem;color:#64748b;line-height:1.55}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+    <div class="admin-heading">
+        <div>
+            <h1><i class="fa-solid fa-shield-halved me-2"></i>Admin Panel</h1>
+            <p class="text-secondary mb-0 mt-2">Manage Flow Mate accounts and review storage usage.</p>
+        </div>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left me-1"></i>Dashboard</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="admin-card">
+            <div class="admin-label">Registered users</div><div class="admin-value">{{ user_count }}</div>
+            <div class="admin-sub">Accounts currently in the database</div>
+        </div></div>
+        <div class="col-md-4"><div class="admin-card">
+            <div class="admin-label">Uploaded document storage</div><div class="admin-value">{{ total_uploaded_text }}</div>
+            <div class="admin-sub">Total of document files associated with users</div>
+        </div></div>
+        <div class="col-md-4"><div class="admin-card">
+            <div class="admin-label">Estimated MongoDB database usage</div>
+            {% if storage_stats %}
+                <div class="admin-value">{{ storage_stats.estimated_text }}</div>
+                {% set percent = (storage_stats.estimated_bytes / (512 * 1024 * 1024) * 100) %}
+                <div class="progress mt-3" role="progressbar" aria-label="Estimated MongoDB usage" aria-valuenow="{{ '%.1f'|format(percent) }}" aria-valuemin="0" aria-valuemax="100" style="height:9px">
+                    <div class="progress-bar {% if storage_stats.status == 'restricted' %}bg-danger{% elif storage_stats.status == 'warning' %}bg-warning{% else %}bg-success{% endif %}" data-width="{{ [percent, 100]|min }}"></div>
+                    <script>
+                        const storageBar = document.currentScript.previousElementSibling;
+                        storageBar.style.width = `${storageBar.dataset.width}%`;
+                    </script>
+                </div>
+                <div class="admin-sub">Estimated {{ '%.1f'|format(percent) }}% of 512 MB · warning at 450 MB · upload stop at 500 MB</div>
+                <div class="mt-3">
+                    {% if storage_stats.status == 'restricted' %}<span class="status-pill status-restricted">New uploads restricted</span>
+                    {% elif storage_stats.status == 'warning' %}<span class="status-pill status-warning">Storage warning</span>
+                    {% else %}<span class="status-pill status-normal">Normal</span>{% endif %}
+                </div>
+            {% else %}
+                <div class="admin-value">Unavailable</div><div class="admin-sub">{{ storage_error }}</div>
+            {% endif %}
+        </div></div>
+    </div>
+
+    {% if storage_stats and storage_stats.status == 'restricted' %}
+    <div class="alert alert-danger" role="alert"><strong>Upload restriction active.</strong> Estimated database usage has reached 500 MB. New document uploads are being rejected.</div>
+    {% elif storage_stats and storage_stats.status == 'warning' %}
+    <div class="alert alert-warning" role="alert"><strong>Storage warning.</strong> Estimated database usage has reached 450 MB. Review MongoDB Atlas Metrics and consider removing unused data.</div>
+    {% endif %}
+
+    <div class="alert alert-info admin-note" role="note">
+        <strong>Storage accuracy:</strong> MongoDB usage shown here is an estimate from database statistics, not an exact Atlas quota meter. Use MongoDB Atlas Metrics for the authoritative cluster storage figure. Upload blocking is a safety threshold, not a guarantee that the database cannot fill from other writes.
+    </div>
+
+    <section class="admin-card">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h2 class="h5 fw-bold mb-0">User accounts</h2>
+            <span class="text-secondary small">Deletion permanently removes that user's app records and associated uploaded documents.</span>
+        </div>
+        {% if users %}
+        <div class="admin-table-wrap">
+            <table class="table table-hover admin-table">
+                <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Document storage</th><th>Role</th><th>Action</th></tr></thead>
+                <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.get('full_name') or '—' }}</td>
+                        <td>{{ user.get('username') or '—' }}</td>
+                        <td>{{ user.get('email') or '—' }}</td>
+                        <td>{{ user.storage_text }} / 5 MB</td>
+                        <td>{% if user.is_admin %}<span class="status-pill status-normal">Admin</span>{% else %}<span class="text-secondary">User</span>{% endif %}</td>
+                        <td>
+                        {% if user.is_admin %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled>Protected</button>
+                        {% else %}
+                            <form method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}" onsubmit="return confirm('Permanently delete this user and all associated tasks, notes, expenses, budgets, Pomodoro sessions, and uploaded documents? This cannot be undone.');">
+                                <input type="hidden" name="csrf_token" value="{{ admin_csrf_token }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash me-1"></i>Delete user</button>
+                            </form>
+                        {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p class="text-secondary mb-0">No user accounts found.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
